@@ -9,7 +9,6 @@ import java.lang.reflect.Method;
 
 // =================== ANNOTATIONS ===================
 
-// Annotation pour la table
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Url {
