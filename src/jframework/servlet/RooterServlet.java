@@ -3,6 +3,8 @@ package jframework.servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 import jakarta.servlet.FilterConfig;
 import jakarta.servlet.RequestDispatcher;
@@ -11,12 +13,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jframework.qutils.Rooter;
 
 public class RooterServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
     private RequestDispatcher dispatcher;
 
+    public static Map<String, Rooter> rooters;
     @Override
     public void init() throws ServletException{
         dispatcher = getServletContext().getNamedDispatcher("default");
@@ -49,8 +53,16 @@ public class RooterServlet extends HttpServlet {
             response.setContentType("text/html;charset=UTF-8");
             try (PrintWriter out = response.getWriter()) {
                 String url = request.getRequestURL().toString();
-                out.print("<h1>RooterServlet</h1>");
-                out.print("<p>URL appelée : " + url + "</p>");
+                
+                Rooter rooter = rooters.get(relativePath);
+
+               
+
+                if (rooter == null) 
+                    out.println("<h1> 404 Not Found</h1>");
+                else{
+                   out.println(rooter.classe+ " : "+rooter.method);
+                }
             }
         }
     }
