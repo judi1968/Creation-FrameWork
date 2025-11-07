@@ -22,7 +22,7 @@ public class JFrameworkStartupListener implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        System.out.println(">>> Application servlet démarrée <<<");
+        System.out.println(">>>>>>> Application servlet demarree sous JFramework <<<<<");
 
         ServletContext servletContext = sce.getServletContext();
         String appPath = servletContext.getRealPath("/WEB-INF/classes");
@@ -40,7 +40,7 @@ public class JFrameworkStartupListener implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        System.out.println(">>> Application arrêtée <<<");
+        System.out.println(">>>>> Application du JFramework arretee  <<<<<<");
     }
 
     private List<Class<?>> findClassesWithAnnotation(File folder, String packageName, Class<?> annotationClass)

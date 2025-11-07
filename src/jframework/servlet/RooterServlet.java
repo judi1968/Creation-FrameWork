@@ -54,15 +54,13 @@ public class RooterServlet extends HttpServlet {
         ServletContext context = request.getServletContext();
         HttpServletRequest req = (HttpServletRequest) request;
         String path = req.getRequestURI();
-
         String relativePath = path.substring(req.getContextPath().length());
-
         if (fileExists(context, relativePath)) {
             dispatcher.forward(request, response);
         } else {
             response.setContentType("text/html;charset=UTF-8");
             try (PrintWriter out = response.getWriter()) {
-                String url = request.getRequestURL().toString();
+                // String url = request.getRequestURL().toString();
                 
                 Map<String, Rooter> rooters = (Map<String, Rooter>) context.getAttribute("rooters");
                 Rooter rooter = rooters.get(relativePath);
@@ -80,10 +78,6 @@ public class RooterServlet extends HttpServlet {
 
                     for (Method m : clazz.getDeclaredMethods()) {
                         if (m.getName().equals(methodName)) {
-
-                            // maka type de retour
-                            String returnType = m.getReturnType().getSimpleName();
-                            System.out.println("Type de retour : " + returnType);
 
                             // mi executer methode
                             Object instance = clazz.getDeclaredConstructor().newInstance();
@@ -107,6 +101,9 @@ public class RooterServlet extends HttpServlet {
     }
 
      private boolean fileExists(ServletContext context, String relativePath) {
+        if (relativePath.compareToIgnoreCase("/") == 0) 
+            return false;
+        
         try {
             URL resource = context.getResource(relativePath);
             return (resource != null);
