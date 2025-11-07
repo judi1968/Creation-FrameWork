@@ -31,7 +31,8 @@ public class JFrameworkStartupListener implements ServletContextListener {
         try {
             List<Class<?>> controllers = findClassesWithAnnotation(new File(appPath), "", Controller.class);
             Map<String, Rooter> rootersMap = getAllRootes(controllers);
-            RooterServlet.rooters = rootersMap;
+            // RooterServlet.rooters = rootersMap;
+            servletContext.setAttribute("rooters", rootersMap);
         } catch (Exception e) {
             e.printStackTrace();
         }
