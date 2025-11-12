@@ -86,8 +86,11 @@ public class RooterServlet extends HttpServlet {
                                 out.println(result);
                             } else if (result.getClass().getName().compareToIgnoreCase("jframework.qutils.ModelView") == 0) {
                                 ModelView modelView = (ModelView) result;
-                                RequestDispatcher dispat =
-                                req.getRequestDispatcher(modelView.getView());
+
+                                for (Map.Entry<String, Object> data: modelView.getData().entrySet()) {
+                                    request.setAttribute(data.getKey(), data.getValue());
+                                }
+                                RequestDispatcher dispat = req.getRequestDispatcher(modelView.getView());
                                 dispat.forward(request,response);
                             } else {
                                 out.println("<h1> Erreur 500 </h1>");
