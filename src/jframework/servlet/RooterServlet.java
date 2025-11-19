@@ -71,6 +71,8 @@ public class RooterServlet extends HttpServlet {
                 Map<String, Rooter> rooters = (Map<String, Rooter>) context.getAttribute("rooters");
                 Rooter rooter = rooters.get(relativePath);
 
+                
+
                 if (rooter == null){
                     boolean isMatch = false;
                     for (Entry<String, Rooter> root : rooters.entrySet()) {
@@ -81,8 +83,19 @@ public class RooterServlet extends HttpServlet {
                             String pathParameter = (String) root.getKey();
                             Rooter rooterParameter = (Rooter) rooters.get(pathParameter);
                             execRoote(request, response, rooterParameter , out, relativePath, root.getKey());
+                        }else{
+                            String[] urlInterogation = relativePath.split("\\?");
+                            if (urlInterogation.length>1) {
+                                if (urlInterogation[0].compareToIgnoreCase(root.getKey()) == 0) {
+                                    rooter = rooters.get(urlInterogation[0]);
+                                    if (rooter != null) {                                        
+                                        execRoote(request, response, rooter , out, relativePath, root.getKey());
+                                    }
+                                }
+                            }
                         }
                     }
+                    if (isMatch) return;
                     if (!isMatch) out.println("<h1> 404 Not Found</h1>");
                 } else {
                     execRoote(request, response, rooter, out, relativePath, relativePath);
@@ -137,14 +150,11 @@ public class RooterServlet extends HttpServlet {
 
                     for (int i = 0; i < parameters.length; i++) {
                         String paramName = parameters[i].getName();
-                        System.out.println(paramName+" anarany"); 
                         String rawValue = request.getParameter(paramName);
                         if (rawValue == null) {
-                            System.out.println("{"+paramName+"}");
                             rawValue = paramUrl.get("{"+paramName+"}");
                         }
 
-                        System.out.println(rawValue+" ityyyyyy");
 
                         Class<?> type = parameters[i].getType();
 
