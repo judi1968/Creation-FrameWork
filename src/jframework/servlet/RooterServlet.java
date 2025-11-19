@@ -17,6 +17,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jframework.annotation.RequestParam;
 import jframework.hutils.TypeCaster;
 import jframework.qutils.ModelView;
 import jframework.qutils.Rooter;
@@ -153,6 +154,13 @@ public class RooterServlet extends HttpServlet {
                         String rawValue = request.getParameter(paramName);
                         if (rawValue == null) {
                             rawValue = paramUrl.get("{"+paramName+"}");
+                        }
+                        if (rawValue == null) {
+                            if (parameters[i].isAnnotationPresent(RequestParam.class)) {
+                                RequestParam requestParam = parameters[i].getAnnotation(RequestParam.class);
+                                 rawValue = request.getParameter(requestParam.value());
+                                 System.out.println(rawValue+" mety eeeeeh ");
+                            }
                         }
 
 
