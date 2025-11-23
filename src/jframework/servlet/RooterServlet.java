@@ -3,6 +3,7 @@ package jframework.servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +17,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jframework.annotation.RequestParam;
+import jframework.hutils.TypeCaster;
 import jframework.qutils.ModelView;
 import jframework.qutils.Rooter;
 
@@ -37,6 +40,7 @@ public class RooterServlet extends HttpServlet {
 
             processRequest(request, response);
         } catch (Exception e) {
+            e.printStackTrace();
             new ServletException(e.getMessage());
         }
     }
@@ -47,6 +51,7 @@ public class RooterServlet extends HttpServlet {
         try {
             processRequest(request, response);
         } catch (Exception e) {
+            e.printStackTrace();
             new ServletException(e.getMessage());
         }
     }
@@ -67,6 +72,8 @@ public class RooterServlet extends HttpServlet {
                 Map<String, Rooter> rooters = (Map<String, Rooter>) context.getAttribute("rooters");
                 Rooter rooter = rooters.get(relativePath);
 
+                
+
                 if (rooter == null){
                     boolean isMatch = false;
                     for (Entry<String, Rooter> root : rooters.entrySet()) {
@@ -74,15 +81,25 @@ public class RooterServlet extends HttpServlet {
                         regex = "^"+regex+"$";
                         if (relativePath.matches(regex)) {
                             isMatch = true;
-                            System.out.println((String) root.getKey()+" ty le mety *************");
                             String pathParameter = (String) root.getKey();
                             Rooter rooterParameter = (Rooter) rooters.get(pathParameter);
-                            execRoote(request, response, rooterParameter , out);
+                            execRoote(request, response, rooterParameter , out, relativePath, root.getKey());
+                        }else{
+                            String[] urlInterogation = relativePath.split("\\?");
+                            if (urlInterogation.length>1) {
+                                if (urlInterogation[0].compareToIgnoreCase(root.getKey()) == 0) {
+                                    rooter = rooters.get(urlInterogation[0]);
+                                    if (rooter != null) {                                        
+                                        execRoote(request, response, rooter , out, relativePath, root.getKey());
+                                    }
+                                }
+                            }
                         }
                     }
+                    if (isMatch) return;
                     if (!isMatch) out.println("<h1> 404 Not Found</h1>");
                 } else {
-                    execRoote(request, response, rooter, out);
+                    execRoote(request, response, rooter, out, relativePath, relativePath);
                 }
             }
         }
@@ -101,7 +118,7 @@ public class RooterServlet extends HttpServlet {
 
     }
 
-    private void execRoote(HttpServletRequest request, HttpServletResponse response, Rooter rooter, PrintWriter out)
+    private void execRoote(HttpServletRequest request, HttpServletResponse response, Rooter rooter, PrintWriter out, String pathClient, String pathController)
             throws Exception {
         HttpServletRequest req = (HttpServletRequest) request;
         String className = rooter.classe;
@@ -114,7 +131,51 @@ public class RooterServlet extends HttpServlet {
 
                 // mi executer methode
                 Object instance = clazz.getDeclaredConstructor().newInstance();
-                Object result = m.invoke(instance);
+
+                Parameter[] parameters = m.getParameters();
+                Object result;
+
+                if (parameters.length == 0) {
+                    // méthode sans paramètre
+                    result = m.invoke(instance);
+                } else {
+                    String[] keyParam = pathController.split("/");
+                    String[] valueParam = pathClient.split("/");
+                    HashMap<String, String> paramUrl = new HashMap<>();
+                    int j=0;
+                    for (String parameter : keyParam) {
+                        paramUrl.put(keyParam[j],valueParam[j]);
+                        j++;
+                    }
+                    Object[] values = new Object[parameters.length];
+
+                    for (int i = 0; i < parameters.length; i++) {
+                        String paramName = parameters[i].getName();
+                        String rawValue = request.getParameter(paramName);
+                        if (rawValue == null) {
+                            rawValue = paramUrl.get("{"+paramName+"}");
+                        }
+                        if (rawValue == null) {
+                            if (parameters[i].isAnnotationPresent(RequestParam.class)) {
+                                RequestParam requestParam = parameters[i].getAnnotation(RequestParam.class);
+                                 rawValue = request.getParameter(requestParam.value());
+                                 System.out.println(rawValue+" mety eeeeeh ");
+                            }
+                        }
+
+
+                        Class<?> type = parameters[i].getType();
+
+                        if (rawValue == null && type.isPrimitive()) {
+                            throw new Exception("Le paramètre '" + paramName +
+                                "' est manquant alors que la méthode attend un type primitif : " + type.getName());
+                        }
+
+                        values[i] = TypeCaster.cast(rawValue, type);
+                    }
+
+                    result = m.invoke(instance, values);
+                }
                 if (result.getClass().getName().compareToIgnoreCase("java.lang.String") == 0) {
                     out.println(result);
                 } else if (result.getClass().getName().compareToIgnoreCase("jframework.qutils.ModelView") == 0) {
