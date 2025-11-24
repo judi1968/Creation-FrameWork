@@ -1,4 +1,6 @@
 D:\IT University\S5\Framework Mr Naina\Creation FrameWork\src\jframework\annotation\Controller.java
+D:\IT University\S5\Framework Mr Naina\Creation FrameWork\src\jframework\annotation\GetUrl.java
+D:\IT University\S5\Framework Mr Naina\Creation FrameWork\src\jframework\annotation\PostUrl.java
 D:\IT University\S5\Framework Mr Naina\Creation FrameWork\src\jframework\annotation\RequestParam.java
 D:\IT University\S5\Framework Mr Naina\Creation FrameWork\src\jframework\annotation\Url.java
 D:\IT University\S5\Framework Mr Naina\Creation FrameWork\src\jframework\hutils\TypeCaster.java

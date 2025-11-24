@@ -13,6 +13,8 @@ import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
 
 import jframework.annotation.Controller;
+import jframework.annotation.GetUrl;
+import jframework.annotation.PostUrl;
 import jframework.annotation.Url;
 import jframework.qutils.Rooter;
 import jframework.servlet.RooterServlet;
@@ -30,9 +32,10 @@ public class JFrameworkStartupListener implements ServletContextListener {
 
         try {
             List<Class<?>> controllers = findClassesWithAnnotation(new File(appPath), "", Controller.class);
-            Map<String, Rooter> rootersMap = getAllRootes(controllers);
+            List<Map<String, Rooter>> rootersMap = getAllRootes(controllers);
             // RooterServlet.rooters = rootersMap;
-            servletContext.setAttribute("rooters", rootersMap);
+            servletContext.setAttribute("rootersGet", rootersMap.get(0));
+            servletContext.setAttribute("rootersPost", rootersMap.get(1));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -67,23 +70,36 @@ public class JFrameworkStartupListener implements ServletContextListener {
         return result;
     }
     
-    private Map<String, Rooter> getAllRootes(List<Class<?>> controllers) {
-    Map<String, Rooter> routes = new HashMap<>();
-
+    private List<Map<String, Rooter>> getAllRootes(List<Class<?>> controllers) {
+    List<Map<String, Rooter>> routes = new ArrayList<>();
+    Map<String, Rooter> routesPost = new HashMap<>();
+    Map<String, Rooter> routesGet = new HashMap<>();
     for (Class<?> controllerClass : controllers) {
         Method[] methods = controllerClass.getDeclaredMethods();
         for (Method method : methods) {
-            if (method.isAnnotationPresent(Url.class)) {
-                Url urlAnnotation = method.getAnnotation(Url.class);
+            if (method.isAnnotationPresent(PostUrl.class)) {
+                PostUrl urlAnnotation = method.getAnnotation(PostUrl.class);
                 String urlValue = urlAnnotation.value();
                 Rooter info = new Rooter();
                 info.classe = controllerClass.getName();
                 info.method = method.getName();
 
-                routes.put(urlValue, info);
+                routesPost.put(urlValue, info);
+            }
+            if(method.isAnnotationPresent(GetUrl.class)) {
+                GetUrl urlAnnotation = method.getAnnotation(GetUrl.class);
+                String urlValue = urlAnnotation.value();
+                Rooter info = new Rooter();
+                info.classe = controllerClass.getName();
+                info.method = method.getName();
+
+                routesGet.put(urlValue, info);
             }
         }
     }
+
+    routes.add(routesGet);
+    routes.add(routesPost);
 
     return routes;
 }
