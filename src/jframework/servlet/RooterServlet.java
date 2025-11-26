@@ -38,7 +38,7 @@ public class RooterServlet extends HttpServlet {
             throws ServletException, IOException {
         try {
 
-            processRequest(request, response);
+            processRequest(request, response, "get");
         } catch (Exception e) {
             e.printStackTrace();
             new ServletException(e.getMessage());
@@ -49,14 +49,14 @@ public class RooterServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            processRequest(request, response);
+            processRequest(request, response, "post");
         } catch (Exception e) {
             e.printStackTrace();
             new ServletException(e.getMessage());
         }
     }
 
-    private void processRequest(HttpServletRequest request, HttpServletResponse response)
+    private void processRequest(HttpServletRequest request, HttpServletResponse response, String typeMethod)
             throws Exception {
         ServletContext context = request.getServletContext();
         HttpServletRequest req = (HttpServletRequest) request;
@@ -68,8 +68,12 @@ public class RooterServlet extends HttpServlet {
             response.setContentType("text/html;charset=UTF-8");
             try (PrintWriter out = response.getWriter()) {
                 // String url = request.getRequestURL().toString();
-
-                Map<String, Rooter> rooters = (Map<String, Rooter>) context.getAttribute("rooters");
+                Map<String, Rooter> rooters = null;
+                if (typeMethod.compareToIgnoreCase("get") == 0) {
+                    rooters = (Map<String, Rooter>) context.getAttribute("rootersGet");
+                } else if (typeMethod.compareToIgnoreCase("post") == 0) {
+                    rooters = (Map<String, Rooter>) context.getAttribute("rootersPost");
+                }
                 Rooter rooter = rooters.get(relativePath);
 
                 
