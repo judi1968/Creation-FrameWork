@@ -191,20 +191,25 @@ public class RooterServlet extends HttpServlet {
                             if (parameters[i].isAnnotationPresent(RequestParam.class)) {
                                 RequestParam requestParam = parameters[i].getAnnotation(RequestParam.class);
                                  rawValue = request.getParameter(requestParam.value());
-                                 System.out.println(rawValue+" mety eeeeeh ");
                             }
                         }
 
 
-                        if (rawValue == null && type.isPrimitive()) {
-                            throw new Exception("Le paramètre '" + paramName +
-                                "' est manquant alors que la méthode attend un type primitif : " + type.getName());
+                        if (rawValue == null || rawValue.isEmpty() || rawValue.trim().length() == 0){
+                            if (type.isPrimitive()) {
+                                if (type == int.class) values[i] = 0;
+                                if (type == double.class) values[i] = 0.0;
+                                if (type == boolean.class) values[i] = false;
+                            } else {   
+                                values[i] = null;
+                            }
+                        }else{
+                            values[i] = TypeCaster.cast(rawValue, type);
                         }
-
-                        values[i] = TypeCaster.cast(rawValue, type);
                     }
 
-                    System.out.println("isannyyyy : " + values.length);
+                    System.out.println(values.length+" eto eeeeh");
+
                     result = m.invoke(instance, values); 
                 }
                 if (result.getClass().getName().compareToIgnoreCase("java.lang.String") == 0) {
