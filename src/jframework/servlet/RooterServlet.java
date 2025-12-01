@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -154,6 +156,32 @@ public class RooterServlet extends HttpServlet {
                     Object[] values = new Object[parameters.length];
 
                     for (int i = 0; i < parameters.length; i++) {
+                        Class<?> type = parameters[i].getType();
+                        if (Map.class.isAssignableFrom(type)) {
+                            Type genericType = parameters[i].getParameterizedType();
+                            ParameterizedType pt = (ParameterizedType) genericType;
+                            Type keyType = pt.getActualTypeArguments()[0];
+                            Type valType = pt.getActualTypeArguments()[1];
+                            
+                            if (keyType == String.class && valType == Object.class) {
+
+                                Map<String, Object> paramMap = new HashMap<>();
+
+                                request.getParameterMap().forEach((k, v) -> {
+                                    if (v != null) {
+                                        if (v.length == 1) {
+                                            paramMap.put(k, v[0]);
+                                        } else {
+                                            paramMap.put(k, v);
+                                        }
+                                    }
+                                });
+
+                                values[i] = paramMap;
+                                continue; 
+                            }
+
+                        }
                         String paramName = parameters[i].getName();
                         String rawValue = request.getParameter(paramName);
                         if (rawValue == null) {
@@ -163,22 +191,26 @@ public class RooterServlet extends HttpServlet {
                             if (parameters[i].isAnnotationPresent(RequestParam.class)) {
                                 RequestParam requestParam = parameters[i].getAnnotation(RequestParam.class);
                                  rawValue = request.getParameter(requestParam.value());
-                                 System.out.println(rawValue+" mety eeeeeh ");
                             }
                         }
 
 
-                        Class<?> type = parameters[i].getType();
-
-                        if (rawValue == null && type.isPrimitive()) {
-                            throw new Exception("Le paramètre '" + paramName +
-                                "' est manquant alors que la méthode attend un type primitif : " + type.getName());
+                        if (rawValue == null || rawValue.isEmpty() || rawValue.trim().length() == 0){
+                            if (type.isPrimitive()) {
+                                if (type == int.class) values[i] = 0;
+                                if (type == double.class) values[i] = 0.0;
+                                if (type == boolean.class) values[i] = false;
+                            } else {   
+                                values[i] = null;
+                            }
+                        }else{
+                            values[i] = TypeCaster.cast(rawValue, type);
                         }
-
-                        values[i] = TypeCaster.cast(rawValue, type);
                     }
 
-                    result = m.invoke(instance, values);
+                    System.out.println(values.length+" eto eeeeh");
+
+                    result = m.invoke(instance, values); 
                 }
                 if (result.getClass().getName().compareToIgnoreCase("java.lang.String") == 0) {
                     out.println(result);
