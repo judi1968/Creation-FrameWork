@@ -71,6 +71,9 @@ public class TypeCaster {
             String nameParameter = nameObject+"."+fieldName;
             if (field.getType().isArray()) {
                 String[] values = request.getParameterValues(nameParameter);
+                if (values == null) {
+                    values = new String[0];
+                }
                 field.set(instance, values);
                 continue;
             }
