@@ -19,7 +19,7 @@ for /f "usebackq delims=" %%f in ("sources.txt") do (
 )
 @REM del sources.txt
 
-REM Copier les fichiers web
+REM Copier les fichiers web 
 
 REM Creation du fichier .war dans le dossier build
 cd %BUILD_DIR%

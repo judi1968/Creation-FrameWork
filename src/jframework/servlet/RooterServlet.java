@@ -194,7 +194,9 @@ public class RooterServlet extends HttpServlet {
                             }
                         }
 
-
+                        // parameter type object
+                        
+                        
                         if (rawValue == null || rawValue.isEmpty() || rawValue.trim().length() == 0){
                             if (type.isPrimitive()) {
                                 if (type == int.class) values[i] = 0;
@@ -206,10 +208,15 @@ public class RooterServlet extends HttpServlet {
                         }else{
                             values[i] = TypeCaster.cast(rawValue, type);
                         }
+                        if (values[i] == null) {
+                            if (TypeCaster.isComplexObject(parameters[i])) {
+                                values[i] = TypeCaster.castObject(parameters[i], request);
+                                System.out.println("mety eto eeeh"+ values[i].getClass().getName());
+                            }
+                        }
                     }
 
-                    System.out.println(values.length+" eto eeeeh");
-
+                    
                     result = m.invoke(instance, values); 
                 }
                 if (result.getClass().getName().compareToIgnoreCase("java.lang.String") == 0) {
