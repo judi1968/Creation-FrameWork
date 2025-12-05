@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.gson.Gson;
+
 import jakarta.servlet.FilterConfig;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletContext;
@@ -19,7 +21,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jframework.annotation.API;
 import jframework.annotation.RequestParam;
+import jframework.hutils.ReturnAPI;
 import jframework.hutils.TypeCaster;
 import jframework.qutils.ModelView;
 import jframework.qutils.Rooter;
@@ -139,11 +143,16 @@ public class RooterServlet extends HttpServlet {
                 Object instance = clazz.getDeclaredConstructor().newInstance();
 
                 Parameter[] parameters = m.getParameters();
-                Object result;
+                Object result = null;
+                Exception exceptionInvocation = null;
 
                 if (parameters.length == 0) {
                     // méthode sans paramètre
-                    result = m.invoke(instance);
+                    try {
+                        result = m.invoke(instance);
+                    } catch (Exception e) {
+                        exceptionInvocation = e;
+                    }
                 } else {
                     String[] keyParam = pathController.split("/");
                     String[] valueParam = pathClient.split("/");
@@ -211,19 +220,27 @@ public class RooterServlet extends HttpServlet {
                         if (values[i] == null) {
                             if (TypeCaster.isComplexObject(parameters[i])) {
                                 values[i] = TypeCaster.castObject(parameters[i], request);
-                                System.out.println("mety eto eeeh"+ values[i].getClass().getName());
                             }
                         }
                     }
 
-                    
-                    result = m.invoke(instance, values); 
+                    try {
+                        result = m.invoke(instance, values);
+                    } catch (Exception e) {
+                        exceptionInvocation = e;
+                    }
                 }
-                if (result.getClass().getName().compareToIgnoreCase("java.lang.String") == 0) {
-                    out.println(result);
-                } else if (result.getClass().getName().compareToIgnoreCase("jframework.qutils.ModelView") == 0) {
-                    ModelView modelView = (ModelView) result;
+                if (m.isAnnotationPresent(API.class)) {
+                    response.setContentType("application/json; charset=UTF-8");
+                    String resultJson = ReturnAPI.getFormatSimple(result, exceptionInvocation);
+                    response.getWriter().write(resultJson);
 
+                }else{
+                    if (result.getClass().getName().compareToIgnoreCase("java.lang.String") == 0) {
+                        out.println(result);
+                    } else if (result.getClass().getName().compareToIgnoreCase("jframework.qutils.ModelView") == 0) {
+                    ModelView modelView = (ModelView) result;
+                    
                     for (Map.Entry<String, Object> data : modelView.getData().entrySet()) {
                         request.setAttribute(data.getKey(), data.getValue());
                     }
@@ -237,6 +254,7 @@ public class RooterServlet extends HttpServlet {
                     out.println("<h1> Erreur 500 </h1>");
                     out.println("<p> Type de retour de " + rooter.classe + " : " + rooter.method + " est invalide");
                 }
+            }
             }
         }
     }

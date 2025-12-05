@@ -102,7 +102,6 @@ public class TypeCaster {
             // List , Vector , HashSet
             if (field.get(instance) == null) {
                 if (Collection.class.isAssignableFrom(fieldType)) {
-                    System.out.println(nameParameter+ " isany " + rawValues.length);
                     Class<?> genericType = String.class;
                     Type generic = field.getGenericType();
                     if (generic instanceof ParameterizedType pt) {
