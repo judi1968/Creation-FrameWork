@@ -13,5 +13,5 @@ import java.lang.reflect.Method;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface API {
-    // String value() default "";
+    FormatApi format() default FormatApi.SIMPLE;
 }
