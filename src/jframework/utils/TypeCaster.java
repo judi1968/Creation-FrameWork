@@ -120,18 +120,16 @@ public class TypeCaster {
 
 
 
-    public static Object setValueAtIndex(Object array, String index, HttpServletRequest request, String nameObject) throws Exception{
+    public static void setValueAtIndex(Object array, String index, Object value) {
         int[] indexes = parseIndexes(index);
 
         Object current = array;
 
-        for (int i = 0; i < indexes.length ; i++) {
+        for (int i = 0; i < indexes.length - 1; i++) {
             current = Array.get(current, indexes[i]);
         }
-        Object value = completedFieldParameter(current, (nameObject+index), request);
-        Array.set(current, indexes[indexes.length], value);
 
-        return array;
+        Array.set(current, indexes[indexes.length - 1], value);
     }
 
 
@@ -140,22 +138,65 @@ public class TypeCaster {
     }
 
 
-    public static void printIndexes(Object array) {
-        walk(array, "");
+
+    public static Object completeArray(Object array, String indexString, String nameObject, HttpServletRequest request) throws Exception {
+        Class<?> type = array.getClass().getComponentType();
+        return walk(array, "", indexString, nameObject, request, type);
+    
     }
 
-    private static void walk(Object array, String path) {
-        if (!array.getClass().isArray()) {
-            System.out.println(path);
-            return;
+    private static Object walk(Object array, String indexPath, String indexString, String nameObject, HttpServletRequest request, Class<?> type) throws Exception {
+        // if (!array.getClass().isArray()) {
+        //     System.out.println(indexPath + " = " + array);
+        //     return null;
+        // }
+
+        // int length = Array.getLength(array);
+
+        // for (int i = 0; i < length; i++) {
+        //     Object element = Array.get(array, i);
+        //     walk(element, indexPath + "[" + i + "]", indexString, nameObject, request);
+        // }
+        // System.out.println(indexPath+" eto eeeeh " + array.getClass().isArray());
+        System.out.println(indexPath+" : "+indexString);
+        if (indexPath.compareToIgnoreCase(indexString) != 0) {
+            if (array != null) {
+                if (array.getClass().isArray()) {
+                    int length = Array.getLength(array);
+                    for (int i = 0; i < length; i++) {
+                        Object element = Array.get(array, i);
+                        type = array.getClass().getComponentType();
+                        element = walk(element, indexPath + "[" + i + "]", indexString, nameObject, request, type);
+                        Array.set(array, i, element);
+                        // setValueAtIndex(array, indexPath +"[" + i + "]", element);
+                    }
+                    return array;  
+                } else {
+                    return null;
+                }    
+            } else {
+                return null;
+            }
+        } else {
+            if (array == null) {
+                System.out.println("eto oooo : "+type.getSimpleName());
+                array = type.getDeclaredConstructor().newInstance();
+                return completedFieldParameter(array, nameObject + indexPath, request);
+            }else{
+                if (!array.getClass().isArray()) {
+                    System.out.println("Tonga eto eeh " + indexPath);
+                    return completedFieldParameter(array, nameObject + indexPath, request);
+                }
+            }
+            return null;
+            
+            // int length = Array.getLength(array);
         }
 
-        int length = Array.getLength(array);
 
-        for (int i = 0; i < length; i++) {
-            Object element = Array.get(array, i);
-            walk(element, path + "[" + i + "]");
-        }
+
+
+        // return array;
     }
 
 
@@ -164,13 +205,16 @@ public class TypeCaster {
 
     public static Object completedFieldParameter(Object instance, String nameObject, HttpServletRequest request)
             throws Exception {
+                System.out.println("----" +nameObject);
         Class<?> classInstance = instance.getClass();
+        System.out.println("-------"+classInstance.getSimpleName());
         Field[] fields = classInstance.getDeclaredFields();
 
         for (Field field : fields) {
             field.setAccessible(true);
             String fieldName = field.getName();
             String nameParameter = nameObject + "." + fieldName;
+            System.out.println("--------" + nameParameter ); 
             Class<?> fieldType = field.getType();
             String[] rawValues = request.getParameterValues(nameParameter);
             if (rawValues == null) {
@@ -178,10 +222,11 @@ public class TypeCaster {
             }
             // tableau
             if (field.getType().isArray()) {
+                System.out.println("----------- tonga eto ooooh [tableau ana object manana tableau]");
                 Class<?> componentType = fieldType.getComponentType();
                 if (isComplexObject(componentType)) {
                     int numberDimension = getArrayDimension(field.getType());
-                    System.out.println("isany eeeh : " + nameParameter + " : " + numberDimension);
+                    System.out.println("-----------" +numberDimension+" isan ilay dimension");
                     Map<String, String[]> paramMap = request.getParameterMap();
                     List<String> keyStartWithNameParameter = new ArrayList<>();
                     for (String key : paramMap.keySet()) {
@@ -196,30 +241,38 @@ public class TypeCaster {
                         String base = (lastDot != -1) ? key.substring(0, lastDot) : key;
                         keyWithoutEnd.add(base);
                     }
-
+                    List<String> indexString = new ArrayList<>();
                     for (String key : keyWithoutEnd) {
-                        System.out.println(key+" reto le cle");
+                        indexString.add(extractIndexes(key));
                         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\[(\\d+)]").matcher(key);
                         int dim = 0;
                         while (matcher.find() && dim < numberDimension) {
                             int value = Integer.parseInt(matcher.group(1));
                             if (value > numberMaxTab[dim]) {
-                                numberMaxTab[dim] = value;
+                                numberMaxTab[dim] = value + 1;
                             }
                             dim++;
                         }
                     }
 
-                    Object arrayMultiDimension =  Array.newInstance(componentType, numberMaxTab);
-
-                    printIndexes(arrayMultiDimension);
-                    // eto *********
-                    Object array = Array.newInstance(componentType, rawValues.length);
-                    for (int i = 0; i < rawValues.length; i++) {
-                        Object casted = cast(rawValues[i], componentType);
-                        Array.set(array, i, casted);
+                    Class<?> typeTab = fieldType.getComponentType();
+                    for (int i = 1; i < numberDimension; i++) {
+                        typeTab = typeTab.getComponentType();
                     }
-                    field.set(instance, array);
+
+                    Object arrayMultiDimension =  Array.newInstance(typeTab, numberMaxTab); 
+                    // System.out.println(Array.get(arrayMultiDimension, 0).getClass().isArray()+" etoeee");
+                    for (String index : indexString) {
+                        arrayMultiDimension = completeArray(arrayMultiDimension, index, nameParameter, request);
+                    }
+                    field.set(instance, arrayMultiDimension);
+                    // eto *********
+                    // Object array = Array.newInstance(componentType, rawValues.length);
+                    // for (int i = 0; i < rawValues.length; i++) {
+                    //     Object casted = cast(rawValues[i], componentType);
+                    //     Array.set(array, i, casted);
+                    // }
+                    // field.set(instance, array);
                     // eto /********* */
                 }else{
                     Object array = Array.newInstance(componentType, rawValues.length);
@@ -270,6 +323,7 @@ public class TypeCaster {
 
             // tsotra
             if (field.get(instance) == null) {
+                System.out.println("---------- tonga eto ");
                 String valueString = request.getParameter(nameParameter);
                 field.set(instance, cast(valueString, field.getType()));
             }
@@ -297,6 +351,7 @@ public class TypeCaster {
                                 }
                             }
                     } else {
+                        
                         Object fieldObject = field.getType().getDeclaredConstructor().newInstance();
                         field.set(instance, completedFieldParameter(fieldObject, nameParameter, request));
                     }
