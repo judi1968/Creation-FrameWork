@@ -12,18 +12,25 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.gson.Gson;
+
 import jakarta.servlet.FilterConfig;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jframework.annotation.API;
+import jframework.annotation.FormatApi;
 import jframework.annotation.RequestParam;
-import jframework.hutils.TypeCaster;
-import jframework.qutils.ModelView;
-import jframework.qutils.Rooter;
+import jframework.tools.ModelView;
+import jframework.tools.Rooter;
+import jframework.utils.ReturnAPI;
+import jframework.utils.TypeCaster;
 
+@MultipartConfig
 public class RooterServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
@@ -78,32 +85,32 @@ public class RooterServlet extends HttpServlet {
                 }
                 Rooter rooter = rooters.get(relativePath);
 
-                
-
-                if (rooter == null){
+                if (rooter == null) {
                     boolean isMatch = false;
                     for (Entry<String, Rooter> root : rooters.entrySet()) {
                         String regex = root.getKey().replaceAll("\\{[^/]+\\}", "([^/]+)");
-                        regex = "^"+regex+"$";
+                        regex = "^" + regex + "$";
                         if (relativePath.matches(regex)) {
                             isMatch = true;
                             String pathParameter = (String) root.getKey();
                             Rooter rooterParameter = (Rooter) rooters.get(pathParameter);
-                            execRoote(request, response, rooterParameter , out, relativePath, root.getKey());
-                        }else{
+                            execRoote(request, response, rooterParameter, out, relativePath, root.getKey());
+                        } else {
                             String[] urlInterogation = relativePath.split("\\?");
-                            if (urlInterogation.length>1) {
+                            if (urlInterogation.length > 1) {
                                 if (urlInterogation[0].compareToIgnoreCase(root.getKey()) == 0) {
                                     rooter = rooters.get(urlInterogation[0]);
-                                    if (rooter != null) {                                        
-                                        execRoote(request, response, rooter , out, relativePath, root.getKey());
+                                    if (rooter != null) {
+                                        execRoote(request, response, rooter, out, relativePath, root.getKey());
                                     }
                                 }
                             }
                         }
                     }
-                    if (isMatch) return;
-                    if (!isMatch) out.println("<h1> 404 Not Found</h1>");
+                    if (isMatch)
+                        return;
+                    if (!isMatch)
+                        out.println("<h1> 404 Not Found</h1>");
                 } else {
                     execRoote(request, response, rooter, out, relativePath, relativePath);
                 }
@@ -124,7 +131,8 @@ public class RooterServlet extends HttpServlet {
 
     }
 
-    private void execRoote(HttpServletRequest request, HttpServletResponse response, Rooter rooter, PrintWriter out, String pathClient, String pathController)
+    private void execRoote(HttpServletRequest request, HttpServletResponse response, Rooter rooter, PrintWriter out,
+            String pathClient, String pathController)
             throws Exception {
         HttpServletRequest req = (HttpServletRequest) request;
         String className = rooter.classe;
@@ -134,27 +142,31 @@ public class RooterServlet extends HttpServlet {
 
         for (Method m : clazz.getDeclaredMethods()) {
             if (m.getName().equals(methodName)) {
-
                 // mi executer methode
                 Object instance = clazz.getDeclaredConstructor().newInstance();
 
                 Parameter[] parameters = m.getParameters();
-                Object result;
+                Object result = null;
+                Exception exceptionInvocation = null;
 
                 if (parameters.length == 0) {
                     // méthode sans paramètre
-                    result = m.invoke(instance);
+                    try {
+                        result = m.invoke(instance);
+                    } catch (Exception e) {
+                        exceptionInvocation = e;
+                    }
                 } else {
                     String[] keyParam = pathController.split("/");
                     String[] valueParam = pathClient.split("/");
                     HashMap<String, String> paramUrl = new HashMap<>();
-                    int j=0;
+                    int j = 0;
                     for (String parameter : keyParam) {
-                        paramUrl.put(keyParam[j],valueParam[j]);
+                        paramUrl.put(keyParam[j], valueParam[j]);
                         j++;
                     }
                     Object[] values = new Object[parameters.length];
-
+                    
                     for (int i = 0; i < parameters.length; i++) {
                         Class<?> type = parameters[i].getType();
                         if (Map.class.isAssignableFrom(type)) {
@@ -164,9 +176,9 @@ public class RooterServlet extends HttpServlet {
                             Type valType = pt.getActualTypeArguments()[1];
                             
                             if (keyType == String.class && valType == Object.class) {
-
+                                
                                 Map<String, Object> paramMap = new HashMap<>();
-
+                                
                                 request.getParameterMap().forEach((k, v) -> {
                                     if (v != null) {
                                         if (v.length == 1) {
@@ -176,66 +188,86 @@ public class RooterServlet extends HttpServlet {
                                         }
                                     }
                                 });
-
+                                
                                 values[i] = paramMap;
-                                continue; 
+                                continue;
                             }
-
+                            
                         }
                         String paramName = parameters[i].getName();
                         String rawValue = request.getParameter(paramName);
                         if (rawValue == null) {
-                            rawValue = paramUrl.get("{"+paramName+"}");
+                            rawValue = paramUrl.get("{" + paramName + "}");
                         }
                         if (rawValue == null) {
                             if (parameters[i].isAnnotationPresent(RequestParam.class)) {
                                 RequestParam requestParam = parameters[i].getAnnotation(RequestParam.class);
-                                 rawValue = request.getParameter(requestParam.value());
+                                rawValue = request.getParameter(requestParam.value());
                             }
                         }
-
+                        
                         // parameter type object
                         
-                        
-                        if (rawValue == null || rawValue.isEmpty() || rawValue.trim().length() == 0){
+                        if (rawValue == null || rawValue.isEmpty() || rawValue.trim().length() == 0) {
                             if (type.isPrimitive()) {
-                                if (type == int.class) values[i] = 0;
-                                if (type == double.class) values[i] = 0.0;
-                                if (type == boolean.class) values[i] = false;
-                            } else {   
+                                if (type == int.class)
+                                    values[i] = 0;
+                                if (type == double.class)
+                                    values[i] = 0.0;
+                                if (type == boolean.class)
+                                    values[i] = false;
+                            } else {
                                 values[i] = null;
                             }
-                        }else{
+                        } else {
                             values[i] = TypeCaster.cast(rawValue, type);
                         }
                         if (values[i] == null) {
                             if (TypeCaster.isComplexObject(parameters[i])) {
                                 values[i] = TypeCaster.castObject(parameters[i], request);
-                                System.out.println("mety eto eeeh"+ values[i].getClass().getName());
                             }
                         }
                     }
-
                     
-                    result = m.invoke(instance, values); 
+                    try {
+                        result = m.invoke(instance, values);
+                    } catch (Exception e) {
+                        exceptionInvocation = e;
+                    }
                 }
-                if (result.getClass().getName().compareToIgnoreCase("java.lang.String") == 0) {
-                    out.println(result);
-                } else if (result.getClass().getName().compareToIgnoreCase("jframework.qutils.ModelView") == 0) {
-                    ModelView modelView = (ModelView) result;
+                if (m.isAnnotationPresent(API.class)) {
+                    response.setContentType("application/json; charset=UTF-8");
+                    API typeAnnotationAPI = m.getAnnotation(API.class);
+                    String resultJson = "";
+                    if (typeAnnotationAPI.format() == FormatApi.ROBUSTE) {
+                        resultJson = ReturnAPI.getFormatRobuste(result, exceptionInvocation);
+                    }else if (typeAnnotationAPI.format() == FormatApi.REST) {
+                        resultJson = ReturnAPI.getFormatRest(result, exceptionInvocation);
+                        response.setStatus(ReturnAPI.getHttpCodeFromException(exceptionInvocation));
+                    }else {
+                        resultJson = ReturnAPI.getFormatSimple(result, exceptionInvocation);
+                    }
+                    response.getWriter().write(resultJson);
 
-                    for (Map.Entry<String, Object> data : modelView.getData().entrySet()) {
-                        request.setAttribute(data.getKey(), data.getValue());
-                    }
-                    String pathDispatch = modelView.getView();
-                    if (!pathDispatch.startsWith("/")) {
-                        pathDispatch = "/" + pathDispatch;
-                    }
-                    RequestDispatcher dispat = req.getRequestDispatcher(pathDispatch);
-                    dispat.forward(request, response);
                 } else {
-                    out.println("<h1> Erreur 500 </h1>");
-                    out.println("<p> Type de retour de " + rooter.classe + " : " + rooter.method + " est invalide");
+                    if (result.getClass().getName().compareToIgnoreCase("java.lang.String") == 0) {
+                        out.println(result);
+                    } else if (result.getClass().getName().compareToIgnoreCase("jframework.tools.ModelView") == 0) {
+                        ModelView modelView = (ModelView) result;
+
+                        for (Map.Entry<String, Object> data : modelView.getData().entrySet()) {
+                            request.setAttribute(data.getKey(), data.getValue());
+                        }
+                        String pathDispatch = modelView.getView();
+                        if (!pathDispatch.startsWith("/")) {
+                            pathDispatch = "/" + pathDispatch;
+                        }
+                        RequestDispatcher dispat = req.getRequestDispatcher(pathDispatch);
+                        dispat.forward(request, response);
+                    } else {
+                        out.println("<h1> Erreur 500 </h1>");
+                        out.println("<p> Type de retour de " + rooter.classe + " : " + rooter.method + " est invalide");
+                    }
                 }
             }
         }
