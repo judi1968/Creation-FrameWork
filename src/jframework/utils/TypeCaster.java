@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Part;
@@ -133,9 +135,18 @@ public class TypeCaster {
     }
 
 
-    public static String extractIndexes(String s) {
-        return s.replaceAll(".*?(\\[.*\\])$", "$1");
+    public static String extractIndexes(String s, String textBefore) {
+        String regex = Pattern.quote(textBefore) + "((\\[\\d+\\])+)";
+        Pattern p = Pattern.compile(regex);
+        Matcher m = p.matcher(s);
+
+        if (m.find()) {
+            return m.group(1);
+        }
+        return "";
     }
+
+
 
 
 
@@ -230,6 +241,7 @@ public class TypeCaster {
                     Map<String, String[]> paramMap = request.getParameterMap();
                     List<String> keyStartWithNameParameter = new ArrayList<>();
                     for (String key : paramMap.keySet()) {
+                        System.out.println("---------- inona ty : " +nameParameter); 
                         if (key.startsWith(nameParameter)) {
                             keyStartWithNameParameter.add(key);
                         }
@@ -239,11 +251,12 @@ public class TypeCaster {
                     for (String key : keyStartWithNameParameter) {
                         int lastDot = key.lastIndexOf('.');
                         String base = (lastDot != -1) ? key.substring(0, lastDot) : key;
-                        keyWithoutEnd.add(base);
+                        System.out.println("---------- inona ndray ty : " +base);
+                        keyWithoutEnd.add(base); 
                     }
                     List<String> indexString = new ArrayList<>();
                     for (String key : keyWithoutEnd) {
-                        indexString.add(extractIndexes(key));
+                        indexString.add(extractIndexes(key, nameParameter));
                         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\[(\\d+)]").matcher(key);
                         int dim = 0;
                         while (matcher.find() && dim < numberDimension) {

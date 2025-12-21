@@ -1,13 +1,16 @@
 package jframework.servlet;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -22,6 +25,7 @@ import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 import jframework.annotation.API;
 import jframework.annotation.FormatApi;
 import jframework.annotation.RequestParam;
@@ -170,6 +174,7 @@ public class RooterServlet extends HttpServlet {
                     for (int i = 0; i < parameters.length; i++) {
                         Class<?> type = parameters[i].getType();
                         if (Map.class.isAssignableFrom(type)) {
+                            System.out.println("intyhy");
                             Type genericType = parameters[i].getParameterizedType();
                             ParameterizedType pt = (ParameterizedType) genericType;
                             Type keyType = pt.getActualTypeArguments()[0];
@@ -190,6 +195,29 @@ public class RooterServlet extends HttpServlet {
                                 });
                                 
                                 values[i] = paramMap;
+                                continue;
+                            } else if (keyType == String.class && valType.getTypeName().compareToIgnoreCase("java.util.List<byte[]>") == 0 ) {
+                                Map<String, List<byte[]>> fichiers = new HashMap<>();
+                                for (Part part : request.getParts()) {
+
+                                    String inputName = part.getName();
+                                    String fileName = part.getSubmittedFileName();
+
+                                    if (fileName == null || fileName.isEmpty()) {
+                                        continue;
+                                    }
+
+                                    byte[] data;
+                                    try (InputStream is = part.getInputStream()) {
+                                        data = is.readAllBytes();
+                                    }
+
+                                    fichiers
+                                        .computeIfAbsent(inputName, k -> new ArrayList<>())
+                                        .add(data);
+                                }
+
+                                values[i] = fichiers;
                                 continue;
                             }
                             
