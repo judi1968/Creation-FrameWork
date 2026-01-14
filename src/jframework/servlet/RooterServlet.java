@@ -25,10 +25,12 @@ import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Part;
 import jframework.annotation.API;
 import jframework.annotation.FormatApi;
 import jframework.annotation.RequestParam;
+import jframework.session.Session;
 import jframework.tools.ModelView;
 import jframework.tools.Rooter;
 import jframework.utils.ReturnAPI;
@@ -44,6 +46,7 @@ public class RooterServlet extends HttpServlet {
     @Override
     public void init() throws ServletException {
         dispatcher = getServletContext().getNamedDispatcher("default");
+    
     }
 
     @Override
@@ -122,7 +125,7 @@ public class RooterServlet extends HttpServlet {
         }
     }
 
-    private boolean fileExists(ServletContext context, String relativePath) {
+    private boolean fileExists(ServletContext context, String relativePath) throws Exception {
         if (relativePath.compareToIgnoreCase("/") == 0)
             return false;
 
@@ -143,7 +146,8 @@ public class RooterServlet extends HttpServlet {
         String methodName = rooter.method;
         // Charger la classe dynamiquement
         Class<?> clazz = Class.forName(className);
-
+        HttpSession httpSession = request.getSession();
+        Session.initializer(httpSession);
         for (Method m : clazz.getDeclaredMethods()) {
             if (m.getName().equals(methodName)) {
                 // mi executer methode
@@ -173,6 +177,11 @@ public class RooterServlet extends HttpServlet {
                     
                     for (int i = 0; i < parameters.length; i++) {
                         Class<?> type = parameters[i].getType();
+                        if (type.getName().equals("jframework.session.Session")) {
+                            Session session = new Session();
+                            values[i] = session;
+                            continue;
+                        }
                         if (Map.class.isAssignableFrom(type)) {
                             System.out.println("intyhy");
                             Type genericType = parameters[i].getParameterizedType();
@@ -255,6 +264,7 @@ public class RooterServlet extends HttpServlet {
                                 values[i] = TypeCaster.castObject(parameters[i], request);
                             }
                         }
+                        
                     }
                     
                     try {
