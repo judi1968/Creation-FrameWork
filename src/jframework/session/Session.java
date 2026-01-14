@@ -4,10 +4,10 @@ import jakarta.servlet.http.HttpSession;
 
 public class Session {
 
-    private static HttpSession session;
+    private HttpSession session;
 
     
-    public static void initializer(HttpSession httpSession) {
+    public  void initializer(HttpSession httpSession) {
         session = httpSession;
     }
 

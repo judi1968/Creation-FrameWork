@@ -146,8 +146,7 @@ public class RooterServlet extends HttpServlet {
         String methodName = rooter.method;
         // Charger la classe dynamiquement
         Class<?> clazz = Class.forName(className);
-        HttpSession httpSession = request.getSession();
-        Session.initializer(httpSession);
+        
         for (Method m : clazz.getDeclaredMethods()) {
             if (m.getName().equals(methodName)) {
                 // mi executer methode
@@ -179,6 +178,8 @@ public class RooterServlet extends HttpServlet {
                         Class<?> type = parameters[i].getType();
                         if (type.getName().equals("jframework.session.Session")) {
                             Session session = new Session();
+                            HttpSession httpSession = request.getSession();
+                            session.initializer(httpSession);
                             values[i] = session;
                             continue;
                         }
