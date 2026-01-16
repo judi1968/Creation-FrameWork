@@ -60,12 +60,12 @@ public class TypeCaster {
         throw new Exception("Type non géré : " + type.getName());
     }
 
-    public static boolean isComplexObject(Parameter parameter) {
+    public static boolean isComplexObject(Parameter parameter) throws Exception {
         Class<?> type = parameter.getType();
         return isComplexObject(type);
     }
 
-    public static boolean isComplexObject(Class<?> type) {
+    public static boolean isComplexObject(Class<?> type) throws Exception {
         if (type.isPrimitive())
             return false;
 
@@ -100,7 +100,7 @@ public class TypeCaster {
         return completedFieldParameter(instanceParametre, nameParameter, request);
     }
 
-    public static int getArrayDimension(Class<?> type) {
+    public static int getArrayDimension(Class<?> type) throws Exception {
         int dimension = 0;
         while (type.isArray()) {
             dimension++;
@@ -110,7 +110,7 @@ public class TypeCaster {
     }
 
 
-    public static int[] parseIndexes(String index) {
+    public static int[] parseIndexes(String index) throws Exception{
         return java.util.Arrays.stream(
                 index.replace("[", "")
                     .split("]")
@@ -122,7 +122,7 @@ public class TypeCaster {
 
 
 
-    public static void setValueAtIndex(Object array, String index, Object value) {
+    public static void setValueAtIndex(Object array, String index, Object value) throws Exception {
         int[] indexes = parseIndexes(index);
 
         Object current = array;
@@ -135,7 +135,7 @@ public class TypeCaster {
     }
 
 
-    public static String extractIndexes(String s, String textBefore) {
+    public static String extractIndexes(String s, String textBefore) throws Exception{
         String regex = Pattern.quote(textBefore) + "((\\[\\d+\\])+)";
         Pattern p = Pattern.compile(regex);
         Matcher m = p.matcher(s);
@@ -157,6 +157,7 @@ public class TypeCaster {
     }
 
     private static Object walk(Object array, String indexPath, String indexString, String nameObject, HttpServletRequest request, Class<?> type) throws Exception {
+        
         // if (!array.getClass().isArray()) {
         //     System.out.println(indexPath + " = " + array);
         //     return null;
@@ -172,8 +173,10 @@ public class TypeCaster {
         System.out.println(indexPath+" : "+indexString);
         if (indexPath.compareToIgnoreCase(indexString) != 0) {
             if (array != null) {
+                System.out.println("------ walkena : "+ array.getClass().getSimpleName());
                 if (array.getClass().isArray()) {
                     int length = Array.getLength(array);
+                    System.out.println("-------------- isany "+length);
                     for (int i = 0; i < length; i++) {
                         Object element = Array.get(array, i);
                         type = array.getClass().getComponentType();
@@ -257,10 +260,12 @@ public class TypeCaster {
                     List<String> indexString = new ArrayList<>();
                     for (String key : keyWithoutEnd) {
                         indexString.add(extractIndexes(key, nameParameter));
+                        System.out.println(key);
                         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\[(\\d+)]").matcher(key);
                         int dim = 0;
                         while (matcher.find() && dim < numberDimension) {
                             int value = Integer.parseInt(matcher.group(1));
+                            System.out.println(value+" value");
                             if (value > numberMaxTab[dim]) {
                                 numberMaxTab[dim] = value + 1;
                             }
@@ -273,10 +278,17 @@ public class TypeCaster {
                         typeTab = typeTab.getComponentType();
                     }
 
+                    String nombreString = "";
+                    for (int a : numberMaxTab) {
+                        nombreString += a+":";
+                    }
                     Object arrayMultiDimension =  Array.newInstance(typeTab, numberMaxTab); 
+                    System.out.println("wawa : " + nombreString+" "+arrayMultiDimension.getClass().getSimpleName());
                     // System.out.println(Array.get(arrayMultiDimension, 0).getClass().isArray()+" etoeee");
                     for (String index : indexString) {
+                        System.out.println("avant calcul : "+ arrayMultiDimension.getClass().getSimpleName());
                         arrayMultiDimension = completeArray(arrayMultiDimension, index, nameParameter, request);
+                        System.out.println("------------ vitaaaah"); 
                     }
                     field.set(instance, arrayMultiDimension);
                     // eto *********
