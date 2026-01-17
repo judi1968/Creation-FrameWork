@@ -13,6 +13,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+
+import java.util.Properties;
 import java.util.Set;
 
 import com.google.gson.Gson;
@@ -28,8 +31,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Part;
 import jframework.annotation.API;
+import jframework.annotation.Authorized;
 import jframework.annotation.FormatApi;
 import jframework.annotation.RequestParam;
+import jframework.annotation.Role;
+import jframework.configuration.ConfigLoader;
 import jframework.session.Session;
 import jframework.tools.ModelView;
 import jframework.tools.Rooter;
@@ -94,6 +100,10 @@ public class RooterServlet extends HttpServlet {
 
                 if (rooter == null) {
                     boolean isMatch = false;
+
+                    
+
+
                     for (Entry<String, Rooter> root : rooters.entrySet()) {
                         String regex = root.getKey().replaceAll("\\{[^/]+\\}", "([^/]+)");
                         regex = "^" + regex + "$";
@@ -159,7 +169,13 @@ public class RooterServlet extends HttpServlet {
                 if (parameters.length == 0) {
                     // méthode sans paramètre
                     try {
-                        result = m.invoke(instance);
+                        if (isMethodAuthorized(m, request)) {
+                            result = m.invoke(instance);
+                        }else{
+                            out.println("<h1> Erreur 403 </h1>");
+                            out.println("<p> url non authorizer </p>");
+                            return;
+                        }
                     } catch (Exception e) {
                         exceptionInvocation = e;
                     }
@@ -269,7 +285,13 @@ public class RooterServlet extends HttpServlet {
                     }
                     
                     try {
-                        result = m.invoke(instance, values);
+                        if (isMethodAuthorized(m, request)) {
+                            result = m.invoke(instance, values);
+                        }else{
+                            out.println("<h1> Erreur 403 </h1>");
+                            out.println("<p> url non authorizer </p>");
+                            return;
+                        }
                     } catch (Exception e) {
                         exceptionInvocation = e;
                     }
@@ -310,6 +332,31 @@ public class RooterServlet extends HttpServlet {
                 }
             }
         }
+    }
+
+    private boolean isMethodAuthorized(Method m, HttpServletRequest request) throws Exception{
+        Properties props = ConfigLoader.load(getServletContext());
+        String url = props.getProperty("authorization.key");
+        HttpSession httpSession = request.getSession();
+        String role = (String) httpSession.getAttribute(url);
+        System.out.println(role+" ity ilay session");
+        if (m.isAnnotationPresent(Authorized.class) && role == null) {
+            return false;
+        }else if(m.isAnnotationPresent(Role.class)) {
+            if (role == null) {
+                return false;
+            }else{
+                Role roleAnnotation = m.getAnnotation(Role.class);
+                String[] rolesAuthorized = roleAnnotation.value().split(",");
+                for (String roleAuthorized : rolesAuthorized) {
+                    if (roleAuthorized.trim().compareToIgnoreCase(role) == 0) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        return true;
     }
 
 }
