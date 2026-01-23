@@ -37,6 +37,7 @@ import jframework.annotation.RequestParam;
 import jframework.annotation.Role;
 import jframework.configuration.ConfigLoader;
 import jframework.session.Session;
+import jframework.session.UserAuthSession;
 import jframework.tools.ModelView;
 import jframework.tools.Rooter;
 import jframework.utils.ReturnAPI;
@@ -338,10 +339,13 @@ public class RooterServlet extends HttpServlet {
         Properties props = ConfigLoader.load(getServletContext());
         String url = props.getProperty("authorization.key");
         HttpSession httpSession = request.getSession();
-        String role = (String) httpSession.getAttribute(url);
-        System.out.println(role+" ity ilay session");
-        if (m.isAnnotationPresent(Authorized.class) && role == null) {
-            return false;
+        UserAuthSession role = (UserAuthSession) httpSession.getAttribute(url);
+        if (m.isAnnotationPresent(Authorized.class)) {
+            if (role == null) {
+                return false;
+            }else{
+                return role.isAuthentified();
+            }
         }else if(m.isAnnotationPresent(Role.class)) {
             if (role == null) {
                 return false;
@@ -349,7 +353,7 @@ public class RooterServlet extends HttpServlet {
                 Role roleAnnotation = m.getAnnotation(Role.class);
                 String[] rolesAuthorized = roleAnnotation.value().split(",");
                 for (String roleAuthorized : rolesAuthorized) {
-                    if (roleAuthorized.trim().compareToIgnoreCase(role) == 0) {
+                    if (role.isAuthentifiedRole(roleAuthorized)) {
                         return true;
                     }
                 }
